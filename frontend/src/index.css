@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #fafafa;
+    color: #171717;
+    font-family: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Vercel Geist Mesh Gradient from DESIGN.md */
+.geist-mesh-gradient {
+  background: radial-gradient(at 0% 0%, #00dfd8 0px, transparent 50%),
+              radial-gradient(at 50% 0%, #0070f3 0px, transparent 50%),
+              radial-gradient(at 100% 0%, #7928ca 0px, transparent 50%),
+              radial-gradient(at 80% 50%, #ff0080 0px, transparent 50%),
+              radial-gradient(at 0% 100%, #ff4d4d 0px, transparent 50%),
+              radial-gradient(at 100% 100%, #f9cb28 0px, transparent 50%);
+  opacity: 0.12;
+  filter: blur(40px);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #fafafa;
+}
+::-webkit-scrollbar-thumb {
+  background: #ebebeb;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #d1d1d1;
+}
+

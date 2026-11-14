@@ -1,0 +1,102 @@
+================================================================================
+RESOLVEAI - AUTONOMOUS MERCHANT INCIDENT RESOLUTION AGENT (PAYTM HACKATHON)
+MASTER EXECUTION TODO LIST & IMPLEMENTATION PLAN
+================================================================================
+
+[X] PHASE 1: DATABASE & MOCK DATA (PostgreSQL / SQLite)
+    [X] 1.1 Create database schema with 4 clean, normalized tables:
+            - `merchants` (id, name, username, password_hash, business_type, bank_name, account_number, ifsc)
+            - `transactions` (id, order_id, merchant_id, amount, status, payment_mode, customer_vpa, rrn, created_at, failure_reason)
+            - `settlement_batches` (id, batch_code, merchant_id, total_amount, status, rail, hold_reason, utr_number, created_at, cleared_at)
+            - `soundbox_devices` (id, device_id, merchant_id, sim_status, battery_level, last_heartbeat, last_chime_status, firmware_version)
+    [X] 1.2 Implement database connection & session manager (psycopg2-binary + SQLite fallback for zero-config run).
+    [X] 1.3 Seed rich, realistic data for the 5 target merchant scenarios:
+            - Scenario 1 (Ramesh Kirana): ₹4,500 morning sales, batch #B-402 held due to NPCI sync timeout.
+            - Scenario 2 (Sharmaji Electronics): ₹78,000 smart TV sale, held under velocity limit (>₹25k human-in-the-loop).
+            - Scenario 3 (Chai Point Stall): ₹60 tea payment succeeded on gateway, but Soundbox had GSM disconnect.
+            - Scenario 4 (Verma Medical): ₹1,200 duplicate debit; 1 success + 1 in NPCI auto-reversal queue.
+            - Scenario 5 (Gupta Sweets): HDFC bank rail spike; requires route switch to ICICI backup rail.
+    [X] 1.4 Write and run automated verification script `test_db.py` to validate database creation, schemas, and queries.
+
+[X] PHASE 2: FASTAPI BACKEND & AGENT ENGINE
+    [X] 2.1 Setup flat backend directory structure:
+            - `backend/main.py`
+            - `backend/config.py`
+            - `backend/logger.py`
+            - `backend/models.py`
+            - `backend/database.py`
+            - `backend/tools.py`
+            - `backend/agent_engine.py`
+            - `backend/routes.py`
+    [X] 2.2 Configure environment variables, logging formatters, and provider initialization (Groq API + Sarvam/Gemini switch).
+    [X] 2.3 Implement resilient `@tool` functions decorated with `tenacity` retries:
+            - `query_merchant_database(sql_query)`: NLP2SQL safe query executor.
+            - `requeue_settlement_batch(batch_id, target_rail)`: Idempotent batch re-routing.
+            - `release_settlement_hold(order_id, approver_note)`: Soft-balance release.
+            - `trigger_soundbox_chime(device_id, amount)`: OTA Soundbox audio trigger.
+            - `verify_bank_utr(order_id)`: Core banking confirmation and UTR retrieval.
+            - `escalate_to_human_supervisor(incident_id, reason, details)`: Human review packaging.
+    [X] 2.4 Build CrewAI Manager-Worker system:
+            - `IncidentManagerAgent`: Intent classification, delegation, SLA monitoring.
+            - `SQLRailInvestigatorAgent`: Schema-aware SQL queries and bank rail diagnostics.
+            - `RemediationAgent`: Idempotent API repair within ₹25,000 safety threshold.
+            - `VerificationAuditorAgent`: UTR verification and merchant communication.
+    [X] 2.5 Build LangGraph Human-in-the-Loop workflow with checkpoint interrupt for >₹25,000 threshold or risk flags.
+    [X] 2.6 Implement Server-Sent Events (SSE) streaming endpoint (`/api/incident/stream`) for cinematic real-time frontend updates.
+    [X] 2.7 Implement human approval resumption endpoint (`/api/incident/approve`).
+    [X] 2.8 Implement merchant authentication & profile endpoints (`/api/auth/login`, `/api/merchants`).
+    [X] 2.9 Add fail-safe simulation mode for zero-latency deterministic stage presentations.
+    [X] 2.10 Run `python -m compileall backend/` to enforce 100% syntax validity across all backend modules.
+    [X] 2.11 Create and execute `test_backend_scenarios.py` to programmatically test all 5 scenarios end-to-end.
+
+[X] PHASE 3: FRONTEND SCAFFOLDING & GEIST DESIGN SYSTEM
+    [X] 3.1 Initialize React + Vite project in `frontend/`.
+    [X] 3.2 Install Tailwind CSS, Lucide React icons, and configure `tailwind.config.js` to strictly follow `DESIGN.md`:
+            - Colors: `#171717` (ink), `#fafafa` (canvas), `#ffffff` (elevated), `#ebebeb` (hairline), `#0070f3` (accent blue).
+            - Typography: Geist Sans & Geist Mono styling with tight negative display tracking.
+            - Shapes: 100px pill buttons for marketing/primary CTAs, 6px tight square buttons for app chrome.
+            - Borders & Depth: 1px hairlines and whisper micro-shadows.
+    [X] 3.3 Create base styles and hero multi-stop mesh gradient in `frontend/src/index.css`.
+    [X] 3.4 Create API service client `frontend/src/api.js` with SSE stream listener and standard REST helpers.
+
+[X] PHASE 4: FRONTEND UI COMPONENTS (Flat Modular Architecture)
+    [X] 4.1 Build `LoginView.jsx`:
+            - Geist-styled credentials form with username & password.
+            - 1-Click "Demo Merchant Quick-Switcher" chips for all 5 scenarios (Ramesh, Sharmaji, Chai Point, Verma, Gupta).
+    [X] 4.2 Build `Navbar.jsx`:
+            - Paytm ResolveAI brand mark, active merchant profile indicator, system health badges, and logout button.
+    [X] 4.3 Build Left Pane: `MerchantChatPane.jsx`:
+            - Conversational merchant interface in clean, high-trust Geist styling.
+            - One-click prompt suggestions based on selected merchant's stuck scenario.
+            - Clear resolution state cards with green checkmarks and highlighted Bank UTR receipts.
+    [X] 4.4 Build Right Pane: `OpsCenterPane.jsx`:
+            - Sub-component `AgentPipelineFlow.jsx`: Cinematic visual pipeline diagram where cards light up in sequence:
+              (01 Intent -> 02 Manager -> 03 SQL Investigator -> 04 Remediation -> 05 Verification).
+            - Sub-component `TerminalTrace.jsx`: Real-time streaming log of tool executions, SQL queries, and millisecond latencies.
+            - Sub-component `SupervisorApprovalModal.jsx`: Human-in-the-loop review card for >₹25,000 transactions with "Approve Override" button.
+            - Sub-component `SoundboxCard.jsx`: Live IoT Soundbox status, battery, GSM signal, and interactive test chime.
+            - Sub-component `LedgerPipelineCard.jsx`: Live table of recent transactions, settlement rail status, and UTR status.
+    [X] 4.5 Connect `App.jsx` to statefully coordinate authentication, chat sessions, SSE streams, and approvals.
+    [X] 4.6 Execute `npm run build` in `frontend/` to verify flawless compilation and asset bundling.
+
+[X] PHASE 5: END-TO-END VERIFICATION & SCENARIO TESTING
+    [X] 5.1 Test Scenario 1 (Ramesh Kirana): Verify ₹4,500 auto-re-queue via secondary IMPS rail and UTR generation.
+    [X] 5.2 Test Scenario 2 (Sharmaji Electronics): Verify >₹25,000 triggers LangGraph human approval, approvals unlock UTR.
+    [X] 5.3 Test Scenario 3 (Chai Point): Verify Soundbox speech failure diagnoses gateway success and fires chime.
+    [X] 5.4 Test Scenario 4 (Verma Medical): Verify duplicate debit detection and auto-reversal reference.
+    [X] 5.5 Test Scenario 5 (Gupta Sweets): Verify acquiring bank degradation detection and gateway routing switch.
+    [X] 5.6 Validate all UI transitions, animations, responsive layouts, and Geist design fidelity.
+    [X] 5.7 Run master diagnostic test script (`test_e2e_full.py` / `test_master_suite.py`) verifying all services and endpoints.
+
+[X] PHASE 6: FINAL POLISH & HACKATHON DEMO READINESS
+    [X] 6.1 Create run scripts / start instructions for 1-command startup (`start_demo.bat` / `start_demo.ps1`).
+    [X] 6.2 Review code against SKILL.md guidelines (flat directories, clean procedural style, tenacity retries, logging).
+    [X] 6.3 Document pitch walkthrough and cheat sheet for live stage presentation.
+
+[X] PHASE 7: FIT-TO-SCREEN VIEWPORT OPTIMIZATION & MULTILINGUAL INDIAN LANGUAGES (TOP 10)
+    [X] 7.1 Fit-to-screen UI overhaul: strict `h-screen overflow-hidden` standard across landing view (`LoginView.jsx`) and main dashboard (`App.jsx`, `MerchantChatPane.jsx`, `OpsCenterPane.jsx`).
+    [X] 7.2 Multi-language dropdown in `Navbar.jsx` supporting top 10 Indian languages: English (`en`), हिन्दी (`hi`), मराठी (`mr`), ગુજરાતી (`gu`), বাংলা (`bn`), தமிழ் (`ta`), తెలుగు (`te`), ಕನ್ನಡ (`kn`), മലയാളം (`ml`), ਪੰਜਾਬੀ (`pa`).
+    [X] 7.3 Multilingual dictionary & scenario prompts in `languages.js` and `agent_engine.py` for all 5 merchant scenarios and generic audits.
+    [X] 7.4 Internal agent operations, telemetry, and tools remain deterministic in English while user input and final verification receipts render in native regional script.
+    [X] 7.5 Verification via `npm run build`, `python Test/test_master_suite.py`, and `python Test/test_multilingual.py`.
+================================================================================
