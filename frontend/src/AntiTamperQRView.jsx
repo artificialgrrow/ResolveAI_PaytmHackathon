@@ -16,10 +16,32 @@ import {
 } from 'lucide-react';
 import { generateStegoTemplate, verifyStegoImage, getSampleTamperedTemplate } from './api';
 
+const DEMO_MERCHANTS = [
+  { id: 'M-101', name: 'Ramesh Kirana Store', username: 'ramesh_kirana' },
+  { id: 'M-102', name: 'Sharmaji Electronics', username: 'sharma_electro' },
+  { id: 'M-103', name: 'Chai Point Stall', username: 'chai_point' },
+  { id: 'M-104', name: 'Verma Medical Hall', username: 'verma_meds' },
+  { id: 'M-105', name: 'Gupta Sweets & Snacks', username: 'gupta_sweets' }
+];
+
 export default function AntiTamperQRView({ merchant }) {
-  const merchantId = merchant?.id || 'M-101';
-  const merchantName = merchant?.name || 'Verified Merchant';
-  const vpa = merchant?.username ? `${merchant.username}@paytm` : 'merchant@paytm';
+  const [selectedMerchantId, setSelectedMerchantId] = useState(merchant?.id || 'M-101');
+
+  useEffect(() => {
+    if (merchant?.id) {
+      setSelectedMerchantId(merchant.id);
+    }
+  }, [merchant?.id]);
+
+  const activeMerchant = DEMO_MERCHANTS.find(m => m.id === selectedMerchantId) || {
+    id: selectedMerchantId,
+    name: merchant?.name || 'Verified Merchant',
+    username: merchant?.username || 'merchant'
+  };
+
+  const merchantId = activeMerchant.id;
+  const merchantName = (merchant && merchant.id === merchantId) ? merchant.name : activeMerchant.name;
+  const vpa = `${activeMerchant.username}@paytm`;
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -144,9 +166,18 @@ export default function AntiTamperQRView({ merchant }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-bodyText">
-            Merchant: <strong className="text-ink">{merchantName}</strong> ({vpa})
-          </span>
+          <span className="text-xs font-mono text-bodyText">Merchant:</span>
+          <select
+            value={selectedMerchantId}
+            onChange={(e) => setSelectedMerchantId(e.target.value)}
+            className="text-xs font-mono font-medium px-2 py-1 rounded border border-hairline bg-white text-ink focus:outline-none focus:border-ink cursor-pointer"
+          >
+            {DEMO_MERCHANTS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name} ({m.username}@paytm)
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
