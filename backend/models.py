@@ -50,3 +50,10 @@ class IncidentResponse(BaseModel):
     approval_reason: Optional[str] = None
     events: List[AgentEvent] = []
 
+class StegoGenerateRequest(BaseModel):
+    merchant_id: str
+
+class StegoVerifyRequest(BaseModel):
+    merchant_id: str
+    image_base64: str
+

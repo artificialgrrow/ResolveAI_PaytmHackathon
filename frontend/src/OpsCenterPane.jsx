@@ -4,7 +4,8 @@ import SupervisorApprovalModal from './SupervisorApprovalModal';
 import LedgerPipelineCard from './LedgerPipelineCard';
 import SoundboxCard from './SoundboxCard';
 import TerminalTrace from './TerminalTrace';
-import { Columns, Square } from 'lucide-react';
+import AntiTamperQRView from './AntiTamperQRView';
+import { Columns, Square, ShieldCheck } from 'lucide-react';
 
 export default function OpsCenterPane({
   events,
@@ -15,10 +16,11 @@ export default function OpsCenterPane({
   onReject,
   isApproving,
   merchantData,
+  currentMerchant,
   onSoundboxUpdated,
   onClearTrace
 }) {
-  const [activeTab, setActiveTab] = useState('pipeline'); // 'pipeline' | 'terminal' | 'soundbox'
+  const [activeTab, setActiveTab] = useState('pipeline'); // 'pipeline' | 'terminal' | 'soundbox' | 'stego_qr'
   const [splitView, setSplitView] = useState(false);
 
   return (
@@ -90,6 +92,18 @@ export default function OpsCenterPane({
             >
               Soundbox IoT
             </button>
+
+            <button
+              onClick={() => { setActiveTab('stego_qr'); setSplitView(false); }}
+              className={`flex items-center gap-1 px-2.5 py-1 text-xs font-mono rounded-sm transition-colors ${
+                !splitView && activeTab === 'stego_qr'
+                  ? 'bg-ink text-white font-medium shadow-whisper'
+                  : 'text-bodyText hover:text-ink bg-canvas'
+              }`}
+            >
+              <ShieldCheck className="h-3 w-3 text-accentBlue" />
+              <span>Anti-Tamper QR</span>
+            </button>
           </div>
 
           {/* Split Mode Toggle Button */}
@@ -144,6 +158,11 @@ export default function OpsCenterPane({
                 <SoundboxCard
                   soundbox={merchantData?.soundbox}
                   onSoundboxUpdated={onSoundboxUpdated}
+                />
+              )}
+              {activeTab === 'stego_qr' && (
+                <AntiTamperQRView
+                  merchant={currentMerchant || merchantData?.merchant}
                 />
               )}
             </div>

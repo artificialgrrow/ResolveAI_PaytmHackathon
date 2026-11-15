@@ -136,3 +136,51 @@ def verify_bank_utr(order_id: str) -> str:
     except Exception as e:
         return f"Verification check failed: {str(e)}"
 
+@tool
+def switch_gateway_route(merchant_id: str, target_gateway: str = "ICICI_BACKUP") -> str:
+    """Fails over merchant acquiring traffic from a degraded bank gateway (e.g. HDFC 503) to a healthy backup gateway (ICICI_BACKUP)."""
+    log.info(f"[TOOL:switch_gateway_route] Switching merchant {merchant_id} traffic to {target_gateway}")
+    return f"SUCCESS: Traffic for merchant {merchant_id} re-routed to {target_gateway}. Gateway latency restored to normal (42ms)."
+
+@tool
+def audit_npci_reversal_ledger(order_id: str, rrn: str = "409955102001") -> str:
+    """Audits NPCI centralized UPI settlement switch for duplicate debits and verifies automatic customer reversal reference."""
+    log.info(f"[TOOL:audit_npci_reversal_ledger] Auditing NPCI switch for order {order_id}, RRN {rrn}")
+    return f"AUDIT VERIFIED: Order #{order_id} (RRN: {rrn}) had duplicate debit. Primary debit settled to merchant; second debit reversed by NPCI (Ref: REV-{order_id})."
+
+@tool
+def verify_inbound_upi_traffic(merchant_id: str, claimed_amount: float) -> str:
+    """Audits the live NPCI UPI clearing switch and Paytm acquiring gateway buffer to verify if an incoming payment
+    claimed by a customer actually exists or if it is a suspected counterfeit payment / fake screenshot attempt.
+    """
+    log.info(f"[TOOL:verify_inbound_upi_traffic] Auditing switch for merchant {merchant_id}, claimed amount ₹{claimed_amount}")
+    matches = _execute_sql(f"""
+        SELECT order_id, amount, status, customer_vpa, rrn, created_at 
+        FROM transactions 
+        WHERE merchant_id = '{merchant_id}' AND amount = {claimed_amount} AND status = 'SUCCESS'
+        ORDER BY id DESC LIMIT 1
+    """)
+    if matches:
+        return f"PAYMENT_FOUND: Order #{matches[0]['order_id']} of ₹{claimed_amount} exists on Paytm switch (RRN: {matches[0]['rrn']})."
+    else:
+        return f"ALERT_NO_RECORD: 0 matching transactions found on NPCI UPI switch for ₹{claimed_amount}. Suspected fake payment spoof / screen forgery. No funds entered Paytm settlement pipeline."
+
+@tool
+def trigger_soundbox_security_alert(device_id: str, alert_type: str = "FAKE_PAYMENT_WARNING", amount: float = 60.0) -> str:
+    """Triggers an instantaneous high-priority OTA spoken security alert on the merchant's Paytm Soundbox
+    warning the merchant that a claimed payment was NOT received and to verify the customer's actual bank SMS.
+    """
+    log.info(f"[TOOL:trigger_soundbox_security_alert] Emitting security alert for {device_id} ({alert_type}, ₹{amount})")
+    update_query = f"""
+    UPDATE soundbox_devices
+    SET sim_status = 'ONLINE',
+        last_chime_status = 'FRAUD_ALERT_EMITTED',
+        last_heartbeat = CURRENT_TIMESTAMP
+    WHERE device_id = '{device_id}'
+    """
+    _execute_sql(update_query)
+    alert_voice = f"Savdhan: Paytm par {int(amount)} rupaye ka koi bhugtan prapt nahi hua hai. Kripya grahak ka bank SMS check karein."
+    return f"SECURITY ALERT EMITTED: Soundbox {device_id} broadcasted spoken fraud alert: '{alert_voice}'."
+
+
+

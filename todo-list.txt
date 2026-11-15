@@ -99,4 +99,23 @@ MASTER EXECUTION TODO LIST & IMPLEMENTATION PLAN
     [X] 7.3 Multilingual dictionary & scenario prompts in `languages.js` and `agent_engine.py` for all 5 merchant scenarios and generic audits.
     [X] 7.4 Internal agent operations, telemetry, and tools remain deterministic in English while user input and final verification receipts render in native regional script.
     [X] 7.5 Verification via `npm run build`, `python Test/test_master_suite.py`, and `python Test/test_multilingual.py`.
+
+[X] PHASE 8: SARVAM AI VOICE CHAT INTEGRATION (SPEECH-TO-TEXT & TEXT-TO-SPEECH)
+    [X] 8.1 Configure Sarvam AI official SDK (`sarvamai`) in `backend/config.py` with `SARVAM_API_KEY` and models (`sarvam-105b-conversations`, `saaras:v3`, `bulbul:v3`).
+    [X] 8.2 Implement `/api/voice/transcribe` in `backend/routes.py` accepting multipart audio (`webm`/`wav`/`mp3`) and transcribing with `client.speech_to_text.transcribe`.
+    [X] 8.3 Implement `/api/voice/tts` supporting Sarvam `client.text_to_speech.convert` with Edge TTS fallback for all 10 Indian languages.
+    [X] 8.4 Activate real microphone recording in `frontend/src/MerchantChatPane.jsx` using browser `MediaRecorder` API with visual recording state, auto-transcription, and auto-submit.
+    [X] 8.5 Test voice transcription and audio generation across Hindi, Marathi, and English.
+
+[X] PHASE 9: TRUE AUTONOMOUS AGENT DYNAMIC TOOL-CALLING & SCENARIO TESTING
+    [X] 9.1 Register 5 standardized tool definitions for LLM tool binding (`requeue_settlement_batch`, `trigger_soundbox_chime`, `release_settlement_hold`, `verify_bank_utr`, `query_merchant_database`).
+    [X] 9.2 Upgrade `agent_engine.py` with dynamic tool calling (LLM reasons, selects tool, executes tool, observes result, synthesizes final verified response).
+    [X] 9.3 Stream live `TOOL_CALL` and `TOOL_RESULT` events to frontend SSE trace showing tool name, input arguments, and output payload.
+    [X] 9.4 Test and verify all 5 hackathon scenarios end-to-end with live tool execution:
+            - S1 (Ramesh Kirana): Requeues batch via IMPS tool, emits UTR.
+            - S2 (Sharmaji Electronics): Safety hold > ₹25k triggers supervisor approval modal.
+            - S3 (Chai Point): IoT soundbox chime tool broadcast.
+            - S4 (Verma Meds): NPCI ledger reversal verification.
+            - S5 (Gupta Sweets): Gateway failover tool execution.
+    [X] 9.5 Enforce zero asterisks (`*`), proper informational card gating, and run full frontend + backend test suites.
 ================================================================================

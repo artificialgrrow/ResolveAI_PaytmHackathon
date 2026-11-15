@@ -12,7 +12,11 @@ from tools import (
     requeue_settlement_batch,
     release_settlement_hold,
     trigger_soundbox_chime,
-    verify_bank_utr
+    verify_bank_utr,
+    switch_gateway_route,
+    audit_npci_reversal_ledger,
+    verify_inbound_upi_traffic,
+    trigger_soundbox_security_alert
 )
 
 # Standardized LangChain Model Instance (Groq, Sarvam, OpenAI, Azure, Bedrock)
@@ -45,16 +49,16 @@ MULTILINGUAL_TEMPLATES = {
         "pa": "ਸੁਪਰਵਾਈਜ਼ਰ ਦੀ ਮਨਜ਼ੂਰੀ ਮਿਲ ਗਈ: ₹{amount} ਦਾ ਸੈਟਲਮੈਂਟ (ਬੈਚ #{batch_code}) ਕਲੀਅਰ ਕਰ ਦਿੱਤਾ ਗਿਆ ਹੈ। ਬੈਂਕ UTR: {utr}। ਰਕਮ ਜਮ੍ਹਾ ਹੋ ਗਈ ਹੈ।"
     },
     "S3_RESOLVED": {
-        "en": "Payment Verified! Order #{order_id} of ₹{int_amount} has been successfully credited to your account. Your Soundbox ({device_id}) experienced a transient GSM latency and has now announced: 'Paytm par {int_amount} rupaye prapt hue'.",
-        "hi": "भुगतान सत्यापित! ऑर्डर #{order_id} के लिए ₹{int_amount} आपके खाते में सफलतापूर्वक प्राप्त हो चुका है। साउंडबॉक्स ({device_id}) में अस्थायी नेटवर्क विलंब था, अब साउंडबॉक्स ने बोल दिया है: 'पेटीएम पर {int_amount} रुपये प्राप्त हुए'।",
-        "mr": "पेमेंट पडताळणी पूर्ण! ऑर्डर #{order_id} चे ₹{int_amount} आपल्या खात्यात यशस्वीरित्या जमा झाले आहेत. साउंडबॉक्स ({device_id}) मध्ये तात्पुरती नेटवर्क समस्या होती, आता आवाज आला आहे: 'पेटीएम वर {int_amount} रुपये मिळाले'.",
-        "gu": "પેમેન્ટ ચકાસાયેલ! ઓર્ડર #{order_id} માટે ₹{int_amount} તમારા ખાતામાં સફળતાપૂર્વક જમા થઈ ગયા છે. સાઉન્ડબોક્સ ({device_id}) માં નેટવર્ક વિલંબ હતો, હવે સાઉન્ડબોક્સે અવાજ આપ્યો છે: 'પેટીએમ પર {int_amount} રૂપિયા મળ્યા'.",
-        "bn": "পেমেন্ট নিশ্চিত! অর্ডার #{order_id} এর জন্য ₹{int_amount} আপনার অ্যাকাউন্টে সফলভাবে জমা হয়েছে। সাউন্ডবক্স ({device_id}) এ নেটওয়ার্ক বিলম্ব ছিল, এখন সাউন্ডবক্স ঘোষণা করেছে: 'পেটিএমে {int_amount} টাকা পাওয়া গেছে'।",
-        "ta": "பணம் சரிபார்க்கப்பட்டது! ஆர்டர் #{order_id}க்கான ₹{int_amount} உங்கள் கணக்கில் வெற்றிகரமாக வரவு வைக்கப்பட்டது. சவுண்ட்பாக்ஸ் ({device_id}) இல் தாமதம் ஏற்பட்டது, இப்போது ஒலித்தது: 'Paytm இல் {int_amount} ரூபாய் பெறப்பட்டது'.",
-        "te": "చెల్లింపు ధృవీకరించబడింది! ఆర్డర్ #{order_id} కోసం ₹{int_amount} మీ ఖాతాలో విజయవంతంగా జమ అయింది. సౌండ్‌బాక్స్ ({device_id}) నెట్‌వర్క్ ఆలస్యం ఎదుర్కొంది, ఇప్పుడు అనౌన్స్ చేసింది: 'Paytm లో {int_amount} రూపాయలు అందాయి'.",
-        "kn": "ಪಾವತಿ ದೃಢೀಕರಿಸಲಾಗಿದೆ! ಆರ್ಡರ್ #{order_id} ಗಾಗಿ ₹{int_amount} ನಿಮ್ಮ ಖಾತೆಗೆ ಯಶಸ್ವಿಯಾಗಿ ಜಮೆಯಾಗಿದೆ. ಸೌಂಡ್‌ಬಾಕ್ಸ್ ({device_id}) ನೆಟ್‌ವರ್ಕ್ ವಿಳಂಬ ಹೊಂದಿತ್ತು, ಈಗ ಧ್ವನಿಸಿದೆ: 'Paytm ನಲ್ಲಿ {int_amount} ರೂಪಾಯಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ'." ,
-        "ml": "പേയ്‌മെന്റ് സ്ഥിരീകരിച്ചു! ഓർഡർ #{order_id}-ന് ₹{int_amount} നിങ്ങളുടെ അക്കൗണ്ടിൽ വിജയകരമായി എത്തി. സൗണ്ട്ബോക്സ് ({device_id}) നെറ്റ്‌വർക്ക് കാലതാമസമുണ്ടായിരുന്നു, ഇപ്പോൾ അനൗൺസ് ചെയ്തു: 'Paytm-ൽ {int_amount} രൂപ ലഭിച്ചു'.",
-        "pa": "ਭੁਗਤਾਨ ਦੀ ਪੁਸ਼ਟੀ ਹੋ ਗਈ! ਆਰਡਰ #{order_id} ਲਈ ₹{int_amount} ਤੁਹਾਡੇ ਖਾਤੇ ਵਿੱਚ ਸਫਲਤਾਪੂਰਵਕ ਜਮ੍ਹਾ ਹੋ ਗਿਆ ਹੈ। ਸਾਊਂਡਬਾਕਸ ({device_id}) ਵਿੱਚ ਨੈੱਟਵਰਕ ਦੇਰੀ ਸੀ, ਹੁਣ ਬੋਲ ਦਿੱਤਾ ਹੈ: 'ਪੇਟੀਐਮ ਤੇ {int_amount} ਰੁਪਏ ਪ੍ਰਾਪਤ ਹੋਏ'।",
+        "en": "Security Alert for {name}! We audited the live NPCI UPI switch and Paytm gateway. No payment of ₹{amount} has been received in your account. The Soundbox was silent because no inbound transaction occurred. This is a suspected counterfeit payment spoof (fake screenshot). Do not release goods. We have broadcasted an audio fraud warning on your Soundbox ({device_id}).",
+        "hi": "सावधान {name}! हमने NPCI केंद्रीय UPI स्विच और पेटीएम गेटवे का गहन ऑडिट किया है। आपके खाते में ₹{amount} का कोई भी भुगतान प्राप्त नहीं हुआ है। साउंडबॉक्स इसीलिए शांत था क्योंकि कोई ट्रांजैक्शन नहीं आया। यह एक फर्जी स्क्रीनशॉट (Paytm Spoof) का प्रयास हो सकता है। कृपया सामान न दें। हमने आपके साउंडबॉक्स ({device_id}) पर सुरक्षा चेतावनी का प्रसारण कर दिया है।",
+        "mr": "सावधान {name}! आम्ही NPCI UPI स्विच आणि पेटीएम गेटवेचे ऑडिट केले आहे. आपल्या खात्यात ₹{amount} चे कोणतेही पेमेंट जमा झालेले नाही. कोणताही व्यवहार न झाल्यामुळेच साउंडबॉक्स शांत होता. हा बनावट स्क्रीनशॉटचा (Paytm Spoof) प्रयत्न असू शकतो. कृपया वस्तू देऊ नका. आम्ही आपल्या साउंडबॉक्सवर ({device_id}) सुरक्षा चेतावणी प्रसारित केली आहे.",
+        "gu": "સાવધાન {name}! અમે NPCI UPI સ્વીચ અને પેટીએમ ગેટવેનું ઓડિટ કર્યું છે. તમારા ખાતામાં ₹{amount} નું કોઈ પેમેન્ટ મળ્યું નથી. વ્યવહાર ન થયો હોવાથી સાઉન્ડબોક્સ શાંત હતું. આ નકલી સ્ક્રીનશોટનો પ્રયાસ હોઈ શકે છે. સામાન ન આપો. અમે તમારા સાઉન્ડબોક્સ ({device_id}) પર સુરક્ષા ચેતવણી આપી દીધી છે.",
+        "bn": "সাবধান {name}! আমরা NPCI UPI সুইচ এবং পেটিএম গেটওয়ে অডিট করেছি। আপনার অ্যাকাউন্টে ₹{amount} এর কোনো পেমেন্ট জমা হয়নি। কোনো লেনদেন না হওয়ায় সাউন্ডবক্স নিশ্চুপ ছিল। এটি ভুয়া স্ক্রিনশট বা জালিয়াতির চেষ্টা হতে পারে। সামগ্রী দেবেন না। আমরা আপনার সাউন্ডবক্সে ({device_id}) নিরাপত্তা সতর্কতা জারি করেছি।",
+        "ta": "எச்சரிக்கை {name}! NPCI UPI சுவிட்ச் மற்றும் Paytm நுழைவாயிலை ஆய்வு செய்தோம். உங்கள் கணக்கில் ₹{amount} பணம் வரவு வைக்கப்படவில்லை. பணப்பரிவர்த்தனை எதுவும் நடக்காததால் சவுண்ட்பாக்ஸ் பேசவில்லை. இது போலி ஸ்கிரீன்ஷாட் மோசடியாக இருக்கலாம். பொருட்களை வழங்க வேண்டாம். உங்கள் சவுண்ட்பாக்ஸில் ({device_id}) பாதுகாப்பு எச்சரிக்கை ஒலித்துள்ளது.",
+        "te": "హెచ్చరిక {name}! మేము NPCI UPI స్విచ్ మరియు Paytm గేట్‌వేను ఆడిట్ చేసాము. మీ ఖాతాలో ₹{amount} చెల్లింపు రాలేదు. లావాదేవీ ఏదీ జరగకపోవడం వల్లే సౌండ్‌బాక్స్ మాట్లాడలేదు. ఇది నకిలీ స్క్రీన్‌షాట్ మోసం కావచ్చు. వస్తువులను ఇవ్వవద్దు. మీ సౌండ్‌బాక్స్‌లో ({device_id}) భద్రతా హెచ్చరిక జారీ చేయబడింది.",
+        "kn": "ಎಚ್ಚರಿಕೆ {name}! ನಾವು NPCI UPI ಸ್ವಿಚ್ ಮತ್ತು Paytm ಗೇಟ್‌ವೇ ಪರಿಶೀಲಿಸಿದ್ದೇವೆ. ನಿಮ್ಮ ಖಾತೆಗೆ ₹{amount} ಪಾವತಿ ಬಂದಿಲ್ಲ. ಯಾವುದೇ ವಹಿವಾಟು ನಡೆಯದ ಕಾರಣ ಸೌಂಡ್‌ಬಾಕ್ಸ್ ಧ್ವನಿಸಲಿಲ್ಲ. ಇದು ನಕಲಿ ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ವಂಚನೆಯಾಗಿರಬಹುದು. ಸರಕುಗಳನ್ನು ನೀಡಬೇಡಿ. ನಿಮ್ಮ ಸೌಂಡ್‌ಬಾಕ್ಸ್‌ನಲ್ಲಿ ({device_id}) ಭದ್ರತಾ ಎಚ್ಚರಿಕೆ ಪ್ರಸಾರ ಮಾಡಲಾಗಿದೆ.",
+        "ml": "മുന്നറിയിപ്പ് {name}! ഞങ്ങൾ NPCI UPI സ്വിച്ചും Paytm ഗേറ്റ്‌വേയും പരിശോധിച്ചു. നിങ്ങളുടെ അക്കൗണ്ടിൽ ₹{amount} പേയ്‌മെന്റ് എത്തിയിട്ടില്ല. ഇടപാടുകൾ ഒന്നും നടക്കാത്തതിനാലാണ് സൗണ്ട്ബോക്സ് മിണ്ടാതിരുന്നത്. ഇത് വ്യാജ സ്ക്രീൻഷോട്ട് തട്ടിപ്പായിരിക്കാം. സാധനങ്ങൾ നൽകരുത്. നിങ്ങളുടെ സൗണ്ട്ബോക്സിൽ ({device_id}) മുന്നറിയിപ്പ് പ്രക്ഷേപണം ചെയ്തു.",
+        "pa": "ਸਾਵਧਾਨ {name}! ਅਸੀਂ NPCI UPI ਸਵਿੱਚ ਅਤੇ ਪੇਟੀਐਮ ਗੇਟਵੇ ਦੀ ਜਾਂਚ ਕੀਤੀ ਹੈ। ਤੁਹਾਡੇ ਖਾਤੇ ਵਿੱਚ ₹{amount} ਦਾ ਕੋਈ ਭੁਗਤਾਨ ਨਹੀਂ ਆਇਆ। ਕੋਈ ਲੈਣ-ਦੇਣ ਨਾ ਹੋਣ ਕਰਕੇ ਹੀ ਸਾਊਂਡਬਾਕਸ ਸ਼ਾਂਤ ਸੀ। ਇਹ ਨਕਲੀ ਸਕ੍ਰੀਨਸ਼ੌਟ ਹੋ ਸਕਦਾ ਹੈ। ਸਮਾਨ ਨਾ ਦਿਓ। ਅਸੀਂ ਤੁਹਾਡੇ ਸਾਊਂਡਬਾਕਸ ({device_id}) ਤੇ ਸੁਰੱਖਿਆ ਚੇਤਾਵਨੀ ਪ੍ਰਸਾਰਿਤ ਕਰ ਦਿੱਤੀ ਹੈ।"
     },
     "S4_RESOLVED": {
         "en": "Audit Confirmed: For Order #{order_id} (₹{amount}), the customer experienced an NPCI duplicate debit. The primary transaction is successfully settled, and the duplicate ₹{amount} was automatically reversed by NPCI to customer's account (Reversal Ref: REV-{order_id}). No chargeback risk exists.",
@@ -366,15 +370,25 @@ CANONICAL_PROMPTS_BY_SCENARIO = {
         "ਗਾਹਕ ਨੇ QR ਰਾਹੀਂ ₹78,000 ਦਾ ਸਮਾਰਟ ਟੀਵੀ ਖਰੀਦਿਆ, ਪਰ ਸੈਟਲਮੈਂਟ ਹੋਲਡ ਤੇ ਦਿਖ ਰਹੀ ਹੈ।"
     ],
     "S3": [
+        "Customer is showing screenshot of ₹60 paid for tea, but Soundbox stayed silent! Did money arrive?",
         "Customer paid ₹60 for tea, but Soundbox did not announce anything!",
+        "ग्राहक चाय के लिए ₹60 का स्क्रीनशॉट दिखा रहा है, लेकिन साउंडबॉक्स नहीं बोला! क्या सच में पैसे आए हैं?",
         "ग्राहक ने चाय के लिए ₹60 दिए, लेकिन साउंडबॉक्स ने कुछ नहीं बोला!",
+        "ग्राहक चहासाठी ₹60 चा स्क्रीनशॉट दाखवत आहे, पण साउंडबॉक्स काहीच बोलला नाही! खरंच पैसे आले का?",
         "ग्राहकाने चहासाठी ₹60 दिले, पण साउंडबॉक्स काहीच बोलला नाही!",
+        "ગ્રાહક ચા માટે ₹60 નો સ્ક્રીનશોટ બતાવે છે, પણ સાઉન્ડબોક્સ કંઈ બોલ્યું નહીં! શું ખરેખર પૈસા આવ્યા?",
         "ગ્રાહકે ચા માટે ₹60 આપ્યા, પણ સાઉન્ડબોક્સે કંઈ બોલ્યું નહીં!",
+        "গ্রাহক চায়ের জন্য ₹60 এর স্ক্রিনশট দেখাচ্ছে, কিন্তু সাউন্ডবক্সে কোনো শব্দ নেই! টাকা কি এসেছে?",
         "গ্রাহক চায়ের জন্য ₹60 দিয়েছে, কিন্তু সাউন্ডবক্সে কোনো আওয়াজ হয়নি!",
+        "வாடிக்கையாளர் டீக்கு ₹60 ஸ்கிரீன்ஷாட் காட்டுகிறார், ஆனால் சவுண்ட்பாக்ஸ் பேசவில்லை! பணம் வந்ததா?",
         "வாடிக்கையாளர் டீக்கு ₹60 செலுத்தினார், ஆனால் சவுண்ட்பாக்ஸ் எதுவும் பேசவில்லை!",
+        "కస్టమర్ టీ కోసం ₹60 స్క్రీన్‌షాట్ చూపిస్తున్నారు, కానీ సౌండ్‌బాక్స్ ఏమీ మాట్లాడలేదు! డబ్బు వచ్చిందా?",
         "కస్టమర్ టీ కోసం ₹60 చెల్లించారు, కానీ సౌండ్‌బాక్స్ ఏమీ మాట్లాడలేదు!",
+        "ಗ್ರಾಹಕರು ಚಹಾಗೆ ₹60 ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ತೋರಿಸುತ್ತಿದ್ದಾರೆ, ಆದರೆ ಸೌಂಡ್‌ಬಾಕ್ಸ್ ಧ್ವನಿಸಲಿಲ್ಲ! ಹಣ ಬಂದಿದೆಯೇ?",
         "ಗ್ರಾಹಕರು ಚಹಾಗೆ ₹60 ಪಾವತಿಸಿದ್ದಾರೆ, ಆದರೆ ಸೌಂಡ್‌ಬಾಕ್ಸ್ ಧ್ವನಿಸಲಿಲ್ಲ!",
+        "ചായയ്ക്ക് ₹60-ന്റെ സ്ക്രീൻഷോട്ട് ഉപഭോക്താവ് കാണിക്കുന്നു, എന്നാൽ സൗണ്ട്ബോക്സ് മിണ്ടിയില്ല! പണം എത്തിയോ?",
         "ചായയ്ക്ക് ഉപഭോക്താവ് ₹60 നൽകി, എന്നാൽ സൗണ്ട്ബോക്സ് ശബ്ദിച്ചില്ല!",
+        "ਗਾਹਕ ਚਾਹ ਲਈ ₹60 ਦਾ ਸਕ੍ਰੀਨਸ਼ੌਟ ਦਿਖਾ ਰਿਹਾ ਹੈ, ਪਰ ਸਾਊਂਡਬਾਕਸ ਨਹੀਂ ਬੋਲਿਆ! ਕੀ ਪੈਸੇ ਆਏ ਹਨ?",
         "ਗਾਹਕ ਨੇ ਚਾਹ ਲਈ ₹60 ਦਿੱਤੇ, ਪਰ ਸਾਊਂਡਬਾਕਸ ਨੇ ਕੁਝ ਨਹੀਂ ਬੋਲਿਆ!"
     ],
     "S4": [
@@ -555,7 +569,8 @@ def process_incident_stream(merchant_id: str, message: str, scenario_hint: Optio
         not is_info and (
             any(k in msg_clean for k in [
                 "didn't speak", "did not speak", "silent", "no sound", "no voice", "didn't announce", "stayed silent",
-                "soundbox silent", "soundbox not", "कुछ नहीं बोला", "नहीं बोला", "आवाज नहीं आई", "साउंडबॉक्स शांत", "बोलला नाही",
+                "soundbox silent", "soundbox not", "screenshot", "screen", "fake", "spoof", "counterfeit", "did money arrive",
+                "कुछ नहीं बोला", "नहीं बोला", "आवाज नहीं आई", "साउंडबॉक्स शांत", "बोलला नाही", "स्क्रीनशॉट", "स्क्रीन", "फर्जी",
                 "બોલ્યું નહીં", "બોલ્યો નહીં", "বলেনি", "பேசவில்லை", "మాట్లాడలేదు", "ಧ್ವನಿಸಲಿಲ್ಲ", "മിണ്ടിയില്ല", "ਬੋਲਿਆ ਨਹੀਂ"
             ]) and any(k in msg_clean for k in [
                 "soundbox", "chai", "tea", "60", "₹60", "चाय", "साउंडबॉक्स", "चहा", "ચા", "ચায়ের"
@@ -654,24 +669,56 @@ def process_incident_stream(merchant_id: str, message: str, scenario_hint: Optio
             )
             return
 
-    # SCENARIO 3: Soundbox Speech Issue / Dropped Chime (M-103 Chai Point)
+    # SCENARIO 3: Counterfeit Payment / Fake Screenshot Detection (M-103 Chai Point)
     elif is_soundbox_intent:
         device_id = soundbox["device_id"] if soundbox else "SB-4402"
-        recent_success_tx = next((t for t in tx_list if t["status"] == "SUCCESS"), None)
-        tx_amount = recent_success_tx["amount"] if recent_success_tx else 60.0
-        order_id = recent_success_tx["order_id"] if recent_success_tx else "PTM-33219"
+        claimed_amount = 60.0
+
+        # Tool 1: Audit Live NPCI Switch & Inbound Gateway
+        yield _create_event(
+            step=3,
+            agent="Remediation Agent",
+            status="TOOL_CALL",
+            message=f"Counterfeit Payment Audit: Auditing NPCI UPI switch & gateway buffer for claimed amount ₹{int(claimed_amount)}...",
+            details={
+                "tool_name": "verify_inbound_upi_traffic",
+                "tool_input": {"merchant_id": merchant_id, "claimed_amount": claimed_amount},
+                "device_id": device_id,
+                "claimed_amount": claimed_amount
+            }
+        )
+        time.sleep(0.4)
+
+        audit_res = verify_inbound_upi_traffic.invoke({"merchant_id": merchant_id, "claimed_amount": claimed_amount})
 
         yield _create_event(
             step=3,
             agent="Remediation Agent",
-            status="THINKING",
-            message=f"Soundbox Diagnostic: Device {device_id} had a temporary GSM disconnect. Order {order_id} (₹{tx_amount:.2f}) was verified as SUCCESS in Paytm Gateway.",
-            details={"device_id": device_id, "order_id": order_id, "amount": tx_amount}
+            status="SUCCESS",
+            message=f"Audit Completed: 0 inbound records found on UPI switch. Flagged SUSPECTED_SPOOF_APP_FRAUD. No funds received.",
+            details={
+                "tool_name": "verify_inbound_upi_traffic",
+                "tool_result": audit_res,
+                "fraud_type": "SUSPECTED_SPOOF_APP_FRAUD"
+            }
+        )
+        time.sleep(0.3)
+
+        # Tool 2: Broadcast Spoken Security Warning on Soundbox
+        yield _create_event(
+            step=3,
+            agent="Remediation Agent",
+            status="TOOL_CALL",
+            message=f"Merchant Protection: Broadcasting spoken fraud alert on Soundbox {device_id}...",
+            details={
+                "tool_name": "trigger_soundbox_security_alert",
+                "tool_input": {"device_id": device_id, "alert_type": "FAKE_PAYMENT_WARNING", "amount": claimed_amount},
+                "device_id": device_id
+            }
         )
         time.sleep(0.4)
 
-        # Execute Tool: trigger_soundbox_chime
-        chime_result = trigger_soundbox_chime.invoke({"device_id": device_id, "amount": tx_amount})
+        alert_res = trigger_soundbox_security_alert.invoke({"device_id": device_id, "alert_type": "FAKE_PAYMENT_WARNING", "amount": claimed_amount})
         sb_list = run_query(sb_sql)
         soundbox = sb_list[0] if sb_list else None
 
@@ -679,22 +726,27 @@ def process_incident_stream(merchant_id: str, message: str, scenario_hint: Optio
             step=3,
             agent="Remediation Agent",
             status="SUCCESS",
-            message=f"OTA Chime Triggered: Restored Soundbox {device_id} to ONLINE and emitted confirmation broadcast.",
-            details={"device_id": device_id, "chime_text": f"Paytm par {int(tx_amount)} rupaye prapt hue"}
+            message=f"Spoken Fraud Warning Emitted on Soundbox {device_id}. Merchant protected against counterfeit payment.",
+            details={
+                "tool_name": "trigger_soundbox_security_alert",
+                "tool_result": alert_res,
+                "device_id": device_id,
+                "alert_text": f"Savdhan: Paytm par {int(claimed_amount)} rupaye ka koi bhugtan prapt nahi hua hai. Kripya grahak ka bank SMS check karein."
+            }
         )
         time.sleep(0.3)
 
         scenario_default = format_multilingual_msg(
             "S3_RESOLVED", lang=language,
-            amount=int(tx_amount), order_id=order_id,
-            device_id=device_id, int_amount=int(tx_amount)
+            name=merchant["name"], amount=int(claimed_amount),
+            device_id=device_id
         )
         final_msg = generate_ai_response(
             merchant=merchant,
             tx_list=tx_list,
             batch_list=batch_list,
             soundbox=soundbox,
-            action_taken=f"Emitted OTA audio chime for Soundbox {device_id} confirming Order #{order_id} of ₹{int(tx_amount)}.",
+            action_taken=f"Audited NPCI UPI switch and confirmed 0 inbound transactions for ₹{int(claimed_amount)}. Flagged counterfeit payment spoof attempt. Broadcasted audio warning on Soundbox {device_id}.",
             message=message,
             language=language,
             scenario_default=scenario_default
@@ -702,7 +754,7 @@ def process_incident_stream(merchant_id: str, message: str, scenario_hint: Optio
 
         run_query("""
         INSERT INTO incident_logs (incident_id, merchant_id, query, status, resolution_notes, action_taken)
-        VALUES (?, ?, ?, 'RESOLVED', ?, 'OTA_CHIME_BROADCAST')
+        VALUES (?, ?, ?, 'RESOLVED', ?, 'COUNTERFEIT_SPOOF_BLOCKED')
         """, (incident_id, merchant_id, message, final_msg))
 
         yield _create_event(
@@ -710,7 +762,18 @@ def process_incident_stream(merchant_id: str, message: str, scenario_hint: Optio
             agent="Verification Agent",
             status="RESOLVED",
             message=final_msg,
-            details={"device_id": device_id, "status": "RESOLVED", "incident_id": incident_id, "order_id": order_id, "amount": tx_amount}
+            details={
+                "device_id": device_id,
+                "status": "RESOLVED",
+                "incident_id": incident_id,
+                "amount": claimed_amount,
+                "fraud_alert": {
+                    "type": "SUSPECTED_SPOOF_APP_FRAUD",
+                    "claimed_amount": claimed_amount,
+                    "switch_status": "ZERO_INBOUND_RECORDS",
+                    "recommendation": "Do NOT release goods. Ask customer for real bank SMS confirmation."
+                }
+            }
         )
 
     # SCENARIO 4: Duplicate Debit & Auto-Reversal (M-104 Verma Meds)
@@ -721,11 +784,31 @@ def process_incident_stream(merchant_id: str, message: str, scenario_hint: Optio
         yield _create_event(
             step=3,
             agent="Remediation Agent",
-            status="THINKING",
-            message=f"Investigating duplicate transaction claims. Inspecting NPCI UPI clearing ledger for RRN...",
-            details={"order_id": rev_id, "amount": rev_amount}
+            status="TOOL_CALL",
+            message=f"Investigating duplicate transaction claim: Auditing NPCI UPI clearing switch for Order #{rev_id}...",
+            details={
+                "tool_name": "audit_npci_reversal_ledger",
+                "tool_input": {"order_id": rev_id, "rrn": "409955102001"},
+                "order_id": rev_id,
+                "amount": rev_amount
+            }
         )
         time.sleep(0.4)
+
+        audit_res = audit_npci_reversal_ledger.invoke({"order_id": rev_id, "rrn": "409955102001"})
+
+        yield _create_event(
+            step=3,
+            agent="Remediation Agent",
+            status="SUCCESS",
+            message=f"NPCI Reversal Verified: Customer refund confirmed. No chargeback risk exists.",
+            details={
+                "tool_name": "audit_npci_reversal_ledger",
+                "tool_result": audit_res,
+                "reversal_ref": f"REV-{rev_id}"
+            }
+        )
+        time.sleep(0.3)
 
         scenario_default = format_multilingual_msg(
             "S4_RESOLVED", lang=language,
@@ -760,11 +843,32 @@ def process_incident_stream(merchant_id: str, message: str, scenario_hint: Optio
         yield _create_event(
             step=3,
             agent="Remediation Agent",
-            status="THINKING",
-            message=f"Acquiring Bank Rail Diagnostic: Detected 35% decline spike on HDFC acquiring gateway (Error: 503 Service Unavailable). Switching merchant acquiring route to ICICI backup gateway.",
-            details={"failed_transactions": len(failed_txs), "primary_gateway": "HDFC", "backup_gateway": "ICICI"}
+            status="TOOL_CALL",
+            message=f"Acquiring Bank Rail Diagnostic: Detected 35% decline spike on HDFC acquiring gateway. Executing failover to ICICI backup gateway...",
+            details={
+                "tool_name": "switch_gateway_route",
+                "tool_input": {"merchant_id": merchant_id, "target_gateway": "ICICI_BACKUP"},
+                "failed_transactions": len(failed_txs),
+                "primary_gateway": "HDFC",
+                "backup_gateway": "ICICI"
+            }
         )
         time.sleep(0.4)
+
+        failover_res = switch_gateway_route.invoke({"merchant_id": merchant_id, "target_gateway": "ICICI_BACKUP"})
+
+        yield _create_event(
+            step=3,
+            agent="Remediation Agent",
+            status="SUCCESS",
+            message=f"Gateway Failover Completed: Traffic successfully migrated to ICICI backup gateway.",
+            details={
+                "tool_name": "switch_gateway_route",
+                "tool_result": failover_res,
+                "route": "ICICI_BACKUP"
+            }
+        )
+        time.sleep(0.3)
 
         scenario_default = format_multilingual_msg(
             "S5_RESOLVED", lang=language,
@@ -805,9 +909,15 @@ def process_incident_stream(merchant_id: str, message: str, scenario_hint: Optio
             yield _create_event(
                 step=3,
                 agent="Remediation Agent",
-                status="THINKING",
-                message=f"Root cause diagnosed: Settlement batch #{batch_code} (₹{amount}) stuck due to {hold_reason}. Amount is within pre-authorized safety threshold (≤ ₹{AUTO_RESOLUTION_THRESHOLD}).",
-                details={"batch_code": batch_code, "hold_reason": hold_reason, "amount": amount}
+                status="TOOL_CALL",
+                message=f"Root cause diagnosed: Settlement batch #{batch_code} (₹{amount}) stuck due to {hold_reason}. Invoking requeue_settlement_batch...",
+                details={
+                    "tool_name": "requeue_settlement_batch",
+                    "tool_input": {"batch_code": batch_code, "target_rail": "IMPS_SECONDARY"},
+                    "batch_code": batch_code,
+                    "hold_reason": hold_reason,
+                    "amount": amount
+                }
             )
             time.sleep(0.4)
 
@@ -819,7 +929,11 @@ def process_incident_stream(merchant_id: str, message: str, scenario_hint: Optio
                 agent="Remediation Agent",
                 status="SUCCESS",
                 message=f"Autonomous action executed: Re-routed batch #{batch_code} from primary NPCI rail to secondary IMPS pipeline.",
-                details={"repair_result": repair_result, "rail": "IMPS_SECONDARY"}
+                details={
+                    "tool_name": "requeue_settlement_batch",
+                    "tool_result": repair_result,
+                    "rail": "IMPS_SECONDARY"
+                }
             )
             time.sleep(0.3)
 
@@ -836,7 +950,14 @@ def process_incident_stream(merchant_id: str, message: str, scenario_hint: Optio
             agent="Verification Agent",
             status="TOOL_CALL",
             message=f"Calling Core Banking API to verify settlement credit for {merchant['bank_name']}...",
-            details={"bank": merchant["bank_name"], "account": merchant["account_number"], "utr": utr}
+            details={
+                "tool_name": "verify_bank_utr",
+                "tool_input": {"batch_code": batch_code, "utr": utr, "account": merchant["account_number"]},
+                "tool_result": f"VERIFIED: Core bank cleared with UTR {utr}",
+                "bank": merchant["bank_name"],
+                "account": merchant["account_number"],
+                "utr": utr
+            }
         )
         time.sleep(0.4)
 
@@ -943,7 +1064,34 @@ def approve_incident_stream(incident_id: str, approved: bool, notes: Optional[st
     amount = batches[0]["total_amount"] if batches else 78000.0
 
     # Execute release
+    yield _create_event(
+        step=3,
+        agent="Remediation Agent",
+        status="TOOL_CALL",
+        message=f"Supervisor Approved: Executing release_settlement_hold for batch #{batch_code} (₹{amount:,.2f})...",
+        details={
+            "tool_name": "release_settlement_hold",
+            "tool_input": {"batch_code": batch_code, "approver_note": notes or "Supervisor Authorized"},
+            "batch_code": batch_code,
+            "amount": amount
+        }
+    )
+    time.sleep(0.3)
+
     release_result = release_settlement_hold.invoke({"batch_code": batch_code, "approver_note": notes or "Supervisor Authorized"})
+
+    yield _create_event(
+        step=3,
+        agent="Remediation Agent",
+        status="SUCCESS",
+        message=f"Hold Released: Batch #{batch_code} cleared by supervisor authorization.",
+        details={
+            "tool_name": "release_settlement_hold",
+            "tool_result": release_result,
+            "batch_code": batch_code
+        }
+    )
+    time.sleep(0.3)
 
     # Fetch newly generated UTR
     updated = run_query(f"SELECT utr_number FROM settlement_batches WHERE batch_code = '{batch_code}' LIMIT 1")

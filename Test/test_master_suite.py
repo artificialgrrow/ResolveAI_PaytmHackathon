@@ -58,11 +58,12 @@ def test_agent_scenarios():
     assert approval_events[-1]["status"] == "RESOLVED"
     print("    -> S2 OK: Paused for approval, then successfully resolved upon authorization.")
 
-    # 3. Chai Point: Soundbox Reconnect & Chime
-    print("  Testing Scenario 3 (Chai Point: Soundbox Chime)...")
-    s3_events = list(process_incident_stream("M-103", "Customer paid 60 rupees but soundbox didn't speak."))
+    # 3. Chai Point: Counterfeit Spoof Detection & Soundbox Warning
+    print("  Testing Scenario 3 (Chai Point: Fake Screenshot / Counterfeit Spoof Detection)...")
+    s3_events = list(process_incident_stream("M-103", "Customer is showing screenshot of 60 rupees for tea, but soundbox was silent. Did money arrive?"))
     assert s3_events[-1]["status"] == "RESOLVED"
-    print("    -> S3 OK: Diagnosed GSM disconnect and emitted OTA audio broadcast.")
+    assert "fraud_alert" in s3_events[-1].get("details", {}) or "fake" in s3_events[-1]["message"].lower() or "सावधान" in s3_events[-1]["message"] or "spoof" in s3_events[-1]["message"].lower()
+    print("    -> S3 OK: Detected 0 switch records, flagged fake payment spoof, and emitted Soundbox security warning.")
 
     # 4. Verma Meds: Duplicate Reversal
     print("  Testing Scenario 4 (Verma Meds: Duplicate UPI Reversal)...")
@@ -137,6 +138,10 @@ if __name__ == "__main__":
         test_agent_scenarios()
         test_fastapi_endpoints()
         test_frontend_build()
+        
+        # Cleanly reseed database so demo states are pristine for manual testing in UI
+        from database import init_db
+        init_db(force_seed=True)
         
         print_banner("ALL SYSTEM CHECKS PASSED (100% OPERATIONAL & VERIFIED)!")
         print("  - Backend: 100% Syntax & Logic Validated")

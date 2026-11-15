@@ -17,6 +17,7 @@ export default function App() {
   const [pendingApproval, setPendingApproval] = useState(null);
   const [isApproving, setIsApproving] = useState(false);
   const [verifiedUtr, setVerifiedUtr] = useState(null);
+  const [fraudAlert, setFraudAlert] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState('en');
 
   // Load merchant live transactions & settlement batches
@@ -44,6 +45,7 @@ export default function App() {
       ]);
       setEvents([]);
       setVerifiedUtr(null);
+      setFraudAlert(null);
       setPendingApproval(null);
     }
   }, [currentMerchant]);
@@ -69,6 +71,7 @@ export default function App() {
     setMessages((prev) => [...prev, { sender: 'merchant', text: messageText }]);
     setIsStreaming(true);
     setVerifiedUtr(null);
+    setFraudAlert(null);
     setPendingApproval(null);
 
     streamIncident(
@@ -107,6 +110,9 @@ export default function App() {
         if (event.status === 'RESOLVED') {
           if (event.details?.utr_number) {
             setVerifiedUtr(event.details.utr_number);
+          }
+          if (event.details?.fraud_alert) {
+            setFraudAlert(event.details.fraud_alert);
           }
           setMessages((prev) => [
             ...prev,
@@ -252,6 +258,7 @@ export default function App() {
                   onSendMessage={handleSendMessage}
                   isStreaming={isStreaming}
                   verifiedUtr={verifiedUtr}
+                  fraudAlert={fraudAlert}
                   suggestedPrompt={localizedPrompt}
                   selectedLanguage={selectedLanguage}
                 />
@@ -268,6 +275,7 @@ export default function App() {
                   onReject={handleReject}
                   isApproving={isApproving}
                   merchantData={merchantData}
+                  currentMerchant={currentMerchant}
                   onSoundboxUpdated={() => refreshMerchantData(currentMerchant.id)}
                   onClearTrace={() => setEvents([])}
                 />

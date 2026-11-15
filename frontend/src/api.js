@@ -125,10 +125,63 @@ export async function fetchTTSAudio(text, language = 'en') {
   return res.blob();
 }
 
+export async function transcribeVoiceAudio(audioBlob, language = 'hi') {
+  const formData = new FormData();
+  formData.append('file', audioBlob, 'recording.webm');
+  formData.append('language', language);
+
+  const res = await fetch(`${API_BASE}/voice/transcribe`, {
+    method: 'POST',
+    body: formData
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Voice transcription failed');
+  }
+
+  return res.json();
+}
+
 export async function resetDemoData() {
   const res = await fetch(`${API_BASE}/admin/reset-demo`, {
     method: 'POST'
   });
+  return res.json();
+}
+
+export async function generateStegoTemplate(merchantId) {
+  const res = await fetch(`${API_BASE}/stego/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ merchant_id: merchantId })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Steganographic template generation failed');
+  }
+  return res.json();
+}
+
+export async function verifyStegoImage(merchantId, imageBase64) {
+  const res = await fetch(`${API_BASE}/stego/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ merchant_id: merchantId, image_base64: imageBase64 })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Steganographic verification failed');
+  }
+  return res.json();
+}
+
+export async function getSampleTamperedTemplate(merchantId) {
+  const res = await fetch(`${API_BASE}/stego/sample-tampered?merchant_id=${merchantId}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to fetch sample tampered template');
+  }
   return res.json();
 }
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Volume2, Battery, Wifi, WifiOff, BellRing, RefreshCw } from 'lucide-react';
-import { pingSoundbox } from './api';
+import { pingSoundbox, fetchTTSAudio } from './api';
 
 export default function SoundboxCard({ soundbox, onSoundboxUpdated }) {
   const [testingChime, setTestingChime] = useState(false);
@@ -8,28 +8,66 @@ export default function SoundboxCard({ soundbox, onSoundboxUpdated }) {
 
   if (!soundbox) return null;
 
-  const playLocalBeep = () => {
+  const isFraudAlert = soundbox.device_id === 'SB-4402' || soundbox.last_chime_status === 'FRAUD_ALERT_EMITTED';
+
+  const playPaytmVoiceChime = async (amount = 60) => {
+    // 1. Play the signature Paytm chime wake-tone or fraud security alert tone
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, ctx.currentTime); // 880Hz
-      osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.2); // chirp
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.35);
+      const playTone = (freq, start, duration) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = isFraudAlert ? 'sawtooth' : 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + start + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + duration);
+      };
+      if (isFraudAlert) {
+        // Urgent 2-tone security warning beep
+        playTone(750, 0.0, 0.18);
+        playTone(950, 0.2, 0.22);
+      } else {
+        // Standard Paytm ascending chime (D5 -> A5)
+        playTone(587.33, 0.0, 0.15); // D5
+        playTone(880.00, 0.15, 0.25); // A5
+      }
     } catch (e) {
-      console.warn("Audio Context blocked or not supported:", e);
+      console.warn("Audio Context error:", e);
+    }
+
+    // 2. Play the context-aware Hindi voice announcement
+    const chimeText = isFraudAlert
+      ? "सावधान: पेटीएम पर साठ रुपये का कोई भुगतान प्राप्त नहीं हुआ है। कृपया ग्राहक का बैंक एसएमएस चेक करें।"
+      : `पेटीएम पर ${amount} रुपये प्राप्त हुए`;
+
+    try {
+      const audioBlob = await fetchTTSAudio(chimeText, 'hi');
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      setTimeout(() => {
+        audio.play().catch(() => {});
+      }, 400); // allow wake chirp to play first
+    } catch (err) {
+      // Fallback to browser SpeechSynthesis
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(chimeText);
+        utterance.lang = 'hi-IN';
+        utterance.rate = 1.0;
+        setTimeout(() => {
+          window.speechSynthesis.speak(utterance);
+        }, 400);
+      }
     }
   };
 
   const handleTestChime = async () => {
     setTestingChime(true);
-    playLocalBeep();
+    playPaytmVoiceChime(60);
     try {
       const res = await pingSoundbox(soundbox.device_id, 60.0);
       setLastChimeMsg(res.message);

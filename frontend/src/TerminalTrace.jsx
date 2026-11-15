@@ -74,7 +74,27 @@ export default function TerminalTrace({ events, onClear }) {
                 [{ev.agent}]
               </span>
               <span className="text-bodyText">{ev.message}</span>
-              {ev.details?.sql_query && (
+              {ev.details?.tool_name && (
+                <div className="mt-1 mb-1 p-2 rounded bg-slate-50 border border-slate-200 font-mono text-[10px]">
+                  <div className="flex items-center justify-between text-slate-700 font-bold mb-1">
+                    <span className="text-accentBlue">RPC &gt; {ev.details.tool_name}()</span>
+                    <span className="text-[9px] px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded font-semibold">
+                      AUTONOMOUS TOOL CALL
+                    </span>
+                  </div>
+                  {ev.details.tool_input && (
+                    <div className="text-slate-600 truncate">
+                      <span className="font-semibold text-slate-800">INPUT:</span> {typeof ev.details.tool_input === 'object' ? JSON.stringify(ev.details.tool_input) : String(ev.details.tool_input)}
+                    </div>
+                  )}
+                  {ev.details.tool_result && (
+                    <div className="text-emerald-700 mt-0.5 truncate">
+                      <span className="font-semibold text-emerald-900">OUTPUT:</span> {String(ev.details.tool_result)}
+                    </div>
+                  )}
+                </div>
+              )}
+              {ev.details?.sql_query && !ev.details?.tool_name && (
                 <div className="mt-0.5 pl-3 py-0.5 text-[10px] bg-canvas border-l-2 border-accentBlue text-ink rounded-r font-mono">
                   &gt; SQL: {ev.details.sql_query}
                 </div>

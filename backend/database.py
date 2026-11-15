@@ -202,20 +202,20 @@ def _seed_data(conn):
     VALUES ('SB-9014', 'M-102', 'ONLINE', 84, ?, 'SUCCESS', 'v4.2.1-paytm')
     """, (fifteen_min_ago,))
 
-    # 3. Scenario 3 (Chai Point Stall): ₹60 tea payment succeeded on gateway, but Soundbox had GSM disconnect
+    # 3. Scenario 3 (Chai Point Stall): Customer claims payment with fake screenshot; Soundbox stayed silent
     cursor.execute("""
     INSERT INTO transactions (order_id, merchant_id, amount, status, payment_mode, customer_vpa, rrn, failure_reason, created_at)
-    VALUES ('PTM-33219', 'M-103', 60.0, 'SUCCESS', 'SOUNDBOX_QR', 'priya.singh@paytm', '409934783219', NULL, ?)
-    """, (fifteen_min_ago,))
+    VALUES ('PTM-33100', 'M-103', 20.0, 'SUCCESS', 'SOUNDBOX_QR', 'manish.verma@paytm', '409934783100', NULL, ?)
+    """, (two_hours_ago,))
 
     cursor.execute("""
     INSERT INTO settlement_batches (batch_code, merchant_id, order_id, total_amount, status, rail, hold_reason, utr_number, created_at, cleared_at)
-    VALUES ('B-115', 'M-103', 'PTM-33219', 60.0, 'SETTLED', 'IMPS_SECONDARY', NULL, 'UTR-8012399120', ?, ?)
+    VALUES ('B-115', 'M-103', 'PTM-33100', 20.0, 'SETTLED', 'IMPS_SECONDARY', NULL, 'UTR-8012399120', ?, ?)
     """, (two_hours_ago, one_hour_ago))
 
     cursor.execute("""
     INSERT INTO soundbox_devices (device_id, merchant_id, sim_status, battery_level, last_heartbeat, last_chime_status, firmware_version)
-    VALUES ('SB-4402', 'M-103', 'TEMPORARY_DISCONNECT', 38, ?, 'DROPPED', 'v4.1.8-paytm')
+    VALUES ('SB-4402', 'M-103', 'ONLINE', 88, ?, 'IDLE_WAITING', 'v4.2.1-paytm')
     """, (fifteen_min_ago,))
 
     # 4. Scenario 4 (Verma Medical): ₹1,200 duplicate debit; 1 success + 1 in NPCI auto-reversal queue
