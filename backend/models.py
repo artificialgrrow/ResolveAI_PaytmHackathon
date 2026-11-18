@@ -57,3 +57,12 @@ class StegoVerifyRequest(BaseModel):
     merchant_id: str
     image_base64: str
 
+
+class QRVoiceRequest(BaseModel):
+    merchant_id: str = "M-101"
+    query: str = "Is this QR valid?"
+    language: Optional[str] = "en"
+    is_verified: bool = False
+    is_valid: Optional[bool] = None
+    integrity_score: Optional[float] = None
+    scanned_vpa: Optional[str] = None

@@ -10,9 +10,9 @@ try:
 except ImportError:
     edge_tts = None
 
-from models import LoginRequest, IncidentRequest, ApprovalRequest, TTSRequest, StegoGenerateRequest, StegoVerifyRequest
+from models import LoginRequest, IncidentRequest, ApprovalRequest, TTSRequest, StegoGenerateRequest, StegoVerifyRequest, QRVoiceRequest
 from database import run_query, init_db
-from agent_engine import process_incident_stream, approve_incident_stream
+from agent_engine import process_incident_stream, approve_incident_stream, process_qr_voice_query
 from tools import trigger_soundbox_chime
 from config import get_sarvam_client, SARVAM_STT_MODEL, SARVAM_TTS_MODEL
 from logger import log
@@ -248,14 +248,61 @@ async def api_verify_stego_upload(file: UploadFile = File(...), merchant_id: str
 def api_sample_tampered(merchant_id: str = "M-101"):
     """Returns sample tampered template with rogue thief sticker/marker dot for 1-click testing."""
     try:
-        tampered_b64 = create_sample_tampered_image(merchant_id)
-        return {
-            "status": "SUCCESS",
-            "merchant_id": merchant_id,
-            "tampered_image_base64": tampered_b64
-        }
+        return create_sample_tampered_image(merchant_id)
     except Exception as e:
         log.error(f"[STEGO] Sample tampered error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/voice/ask-agent")
+async def api_ask_voice_agent(req: QRVoiceRequest):
+    """Processes merchant voice inquiry regarding QR authenticity and speaks back directly via neural TTS."""
+    voice_res = process_qr_voice_query(
+        merchant_id=req.merchant_id,
+        query=req.query,
+        is_verified=req.is_verified,
+        is_valid=req.is_valid,
+        integrity_score=req.integrity_score,
+        scanned_vpa=req.scanned_vpa,
+        language=req.language or "en"
+    )
+    
+    # Synthesize audio bytes in background
+    audio_base64 = None
+    spoken_text = voice_res["spoken_text"]
+    lang = (req.language or "en").lower()
+    
+    # 1. Try Sarvam AI TTS
+    sarvam_client = get_sarvam_client()
+    if sarvam_client:
+        try:
+            sarvam_lang = SARVAM_LANG_CODES.get(lang, "hi-IN")
+            res = sarvam_client.text_to_speech.convert(
+                text=spoken_text,
+                language_code=sarvam_lang,
+                speaker="aditya",
+                model=SARVAM_TTS_MODEL
+            )
+            if res and res.audios:
+                audio_base64 = res.audios[0]
+        except Exception as e:
+            log.warning(f"[VOICE_AGENT] Sarvam TTS failed: {e}")
+            
+    # 2. Try Edge TTS fallback
+    if not audio_base64 and edge_tts:
+        voice = EDGE_TTS_VOICES.get(lang, "en-IN-NeerjaNeural")
+        try:
+            communicate = edge_tts.Communicate(spoken_text, voice)
+            chunks = []
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    chunks.append(chunk["data"])
+            raw_audio = b"".join(chunks)
+            if raw_audio:
+                audio_base64 = base64.b64encode(raw_audio).decode("utf-8")
+        except Exception as e:
+            log.warning(f"[VOICE_AGENT] Edge TTS fallback failed: {e}")
+
+    voice_res["audio_base64"] = audio_base64
+    return voice_res
 
 

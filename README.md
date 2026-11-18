@@ -1,11 +1,22 @@
-# ResolveAI - Autonomous Merchant Operations Teammate
+# Paytm QR Armor - Autonomous Physical QR Provenance & Anti-Tamper Security Agent
 
 > **Paytm India AI Hackathon (Track 3: Autonomous AI Teammates)**  
-> An autonomous multi-agent teammate that diagnoses, investigates, and resolves merchant payment and settlement incidents in real time without FAQ deflection.
+> An autonomous AI security teammate that cryptographically binds physical merchant QR standees to merchant identity and defends against physical sticker replacement and payment diversion fraud.
 
 ---
 
-## Quick Start (Setup in 3 Steps)
+## 💡 The Core Problem: Counter QR Tampering & Sticker Swaps
+
+In December 2025, Delhi Police uncovered a fraud ring that altered over 100 genuine merchant QR codes by pasting fraudulent stickers over them to divert payments. Current UPI systems rely solely on asking busy merchants and customers to verify the name displayed on their phones.
+
+**Paytm QR Armor** solves this through **Dual-Binding Cryptographic Provenance**:
+1. **Visible QR Destination:** Scanned UPI VPA (`ramesh_kirana@paytm`)
+2. **Invisible Cryptographic Watermark:** HMAC-SHA256 digital signature embedded into the standee bitplanes via 4-bit LSB steganography.
+3. **Autonomous Remediation:** If either layer differs, the autonomous AI agent freezes settlement payouts, emits a spoken warning on the Paytm Soundbox, and files an NPCI fraud dossier.
+
+---
+
+## 🚀 Quick Start (Setup in 3 Steps)
 
 ### 1. Prerequisites
 - **Python 3.10+**
@@ -13,13 +24,10 @@
 
 ### 2. Backend Setup
 ```bash
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Create your .env file
-copy .env.example backend\.env
+# Setup virtual environment and dependencies
+uv venv venv
+uv pip install --python venv -r requirements.txt
 ```
-*(Optional: Open `backend/.env` and add your `GROQ_API_KEY` or `OPENAI_API_KEY`. If no key is provided, the built-in Dynamic Context Engine runs automatically out of the box with zero external dependencies).*
 
 ### 3. Frontend Setup
 ```bash
@@ -30,7 +38,7 @@ cd ..
 
 ---
 
-## Running the Application
+## 🏃 Running the Application
 
 ### Option A: 1-Click Launch (Windows)
 Double-click `start_demo.bat` or run:
@@ -39,11 +47,10 @@ Double-click `start_demo.bat` or run:
 ```
 
 ### Option B: Manual Launch
-
 **Terminal 1 (Backend):**
 ```bash
 cd backend
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+..\venv\bin\python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **Terminal 2 (Frontend):**
@@ -52,92 +59,36 @@ cd frontend
 npm run dev
 ```
 
-Open your browser at **`http://localhost:5173`**.
+Open **`http://localhost:5173`** in your browser.
 
 ---
 
-## How It Works
-
-ResolveAI functions like a real operational support engineer embedded directly in the Paytm merchant ecosystem:
+## ⚙️ Architecture & Features
 
 ```
-Merchant Query (Text or Regional Voice)
-                  │
-                  ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 01. Incident Manager Agent                                   │
-│     - Identifies merchant profile and business type         │
-│     - Validates ₹25,000 autonomous safety limit              │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 02. SQL & Rail Investigator Agent                           │
-│     - Inspects live transaction ledger & settlement batches │
-│     - Audits Soundbox GSM/network telemetry                 │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 03. Remediation Agent                                       │
-│     - Re-routes stuck settlement batches (IMPS Secondary)   │
-│     - Triggers OTA audio chime broadcasts for Soundbox      │
-│     - Fails over acquiring traffic to backup gateways       │
-│     - Pauses for 1-click supervisor approval if > ₹25,000   │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 04. Verification & Audit Agent                              │
-│     - Validates core banking UTR reference                  │
-│     - Synthesizes clean plain-text response in merchant's   │
-│       language (Hindi, Marathi, Gujarati, English, etc.)    │
-│     - Generates Edge TTS neural audio voiceover             │
-└─────────────────────────────────────────────────────────────┘
+Merchant Physical Standee
+           │
+           ├────────────────────────────┐
+           ▼                            ▼
+  [Visible QR Code]            [Invisible Bitplane Watermark]
+  UPI URI: upi://pay?pa=...    HMAC-SHA256 Merchant Signature
+           │                            │
+           └──────────────┬─────────────┘
+                          │
+                          ▼
+            ┌───────────────────────────┐
+            │ Dual-Binding Provenance   │
+            │ Engine (Integrity Check)  │
+            └─────────────┬─────────────┘
+                          │
+            ┌─────────────┴─────────────┐
+            ▼                           ▼
+    [GENUINE VERIFIED]          [TAMPERING DETECTED]
+    - Status: 96.6% Match       - Destination: thief_scam99@ybl
+    - Payments Flow Normally    - Autonomous Payout Freeze
+                                - Soundbox Hardware Fraud Spoken Alert
+                                - NPCI Fraud Docket Filed
 ```
 
----
-
-## Key Features
-
-- **Generic Chatbot & Dynamic Ledger Lookup:** Ask any question (e.g. *"What is the order ID of my payment?"*, *"What is my bank account?"*, *"How much battery is in Soundbox?"*). ResolveAI answers factually from live SQLite records without triggering unneeded actions or displaying irrelevant cards.
-- **Top 10 Indian Languages:** Native support for English, Hindi, Marathi, Gujarati, Bengali, Tamil, Telugu, Kannada, Malayalam, and Punjabi.
-- **Natural Neural Audio (Edge TTS):** Click the `Listen Voice` button under any response to hear the answer in the selected regional language.
-- **Human-in-the-Loop Safety Boundary:** Autonomous auto-fix is capped at **₹25,000**. Transactions above this threshold pause execution and require 1-click supervisor authorization.
-- **Zero FAQ Deflection:** Instead of giving merchants static help links, ResolveAI actually diagnoses database records and takes API action.
-
----
-
-## Demo Scenarios
-
-| Merchant | Scenario | Autonomous Action |
-| :--- | :--- | :--- |
-| **Ramesh Kirana Store** (`M-101`) | Morning sales ₹4,500 stuck | Re-routes batch via IMPS & generates bank UTR |
-| **Sharma Electronics** (`M-102`) | High-value ₹78,000 Smart TV sale | Pauses for 1-click supervisor override |
-| **Chai Point Stall** (`M-103`) | Soundbox silent on ₹60 tea payment | OTA audio chime broadcast (`SB-4402`) |
-| **Verma Meds** (`M-104`) | Customer charged twice for ₹1,200 | Verifies NPCI auto-reversal reference |
-| **Gupta Sweets** (`M-105`) | Multiple customer QR payments failing | Switches route to ICICI backup gateway |
-
----
-
-## Project Structure
-
-```
-Paytm_Hackathon/
-├── backend/
-│   ├── main.py              # FastAPI server entry point
-│   ├── routes.py            # SSE stream and approval endpoints
-│   ├── agent_engine.py      # Multi-agent orchestrator & synthesizer
-│   ├── tools.py             # Idempotent remediation tools (IMPS, Chime, Reversal)
-│   ├── database.py          # SQLite zero-config ledger and telemetry
-│   └── config.py            # Environment and LLM provider loader
-├── frontend/
-│   ├── src/
-│   │   ├── App.jsx          # Main application container
-│   │   ├── MerchantChatPane.jsx # Chat pane with Edge TTS voice
-│   │   ├── OpsCenterPane.jsx    # Real-time multi-agent execution visualizer
-│   │   └── languages.js     # Top 10 Indian languages configuration
-├── requirements.txt         # Python dependencies
-├── start_demo.bat           # 1-click Windows startup script
-└── README.md                # Project documentation
-```
+- **Zero-Chat Voice-First Experience:** Uses Sarvam AI (Saaras STT & Bulbul TTS) with Edge TTS fallback for spoken regional voice across Top 10 Indian Languages (Hindi, Marathi, Gujarati, Tamil, etc.).
+- **Vercel Geist Design System:** Engineered, clean layout conforming strictly to `DESIGN.md`.

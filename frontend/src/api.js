@@ -186,3 +186,16 @@ export async function getSampleTamperedTemplate(merchantId) {
   return res.json();
 }
 
+
+export async function askVoiceAgent(params) {
+  const res = await fetch(`${API_BASE}/voice/ask-agent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Voice agent request failed');
+  }
+  return res.json();
+}
